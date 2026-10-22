@@ -421,8 +421,10 @@ export default function Home() {
             )}
           </div>
           <p className="meta">
-            Drafting runs on local Gemma first (Ollama), with AI Studio as a fallback. Your
-            dictation stays on your machine for that step.
+            Drafting runs on local Gemma first (Ollama), with AI Studio as a fallback. When
+            local Gemma drafts, your dictation stays on your machine for that step. When the
+            cloud fallback drafts instead, your transcript is sent to Google AI Studio for
+            that request. Transcription and read-back use ElevenLabs.
           </p>
         </section>
 

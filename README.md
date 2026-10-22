@@ -1,5 +1,9 @@
 # Talk to the Book
 
+**Live demo: [talk-to-the-book.nikema.dev](https://talk-to-the-book.nikema.dev)**
+
+The hosted demo drafts with the cloud Gemma fallback, because a server has no local model. The real workflow is local-first: run it on your own machine (setup below) and your dictation never leaves it for the drafting step. Transcription and read-back use ElevenLabs either way.
+
 Dictate a memory. A local Gemma cleans it into a first draft and files it into your book. ElevenLabs reads it back so you can hear whether it sounds like you.
 
 Built for the Hacktoberfest Open-Source AI Challenge, Week 3 (2026): theme "Slow and Steady", building something with open-source AI that rewards laziness. Talking is lazier than typing, and a memoir that has waited since 2021 deserves the laziest possible on-ramp.
@@ -21,6 +25,8 @@ The four parts of *My Story* live in `lib/chapters.ts` as the default outline. A
 ## Why open, and why local Gemma
 
 A memoir draft is about as private as writing gets. Gemma 4 is open-weight (Apache 2.0), so the drafting step can run on the author's own machine through Ollama. The transcript of an unpublished, pre-sold memoir never has to leave her laptop to become a draft. The same code can fall back to Gemma served through Google AI Studio (`gemma-4-31b-it`) when Ollama is not running, which also makes a hosted demo possible.
+
+One disclosure, stated plainly: the cloud fallback sends your transcript to Google. If local Gemma is unreachable, or `GEMMA_MODE=cloud` is set, the draft request and the transcript text in it go to Google AI Studio, and Google processes them under its own terms. The hosted demo runs in cloud mode, so anything dictated there is drafted by Google's hosted Gemma; audio transcription and read-back go to ElevenLabs in every mode. Local mode is the private path: run it on your own machine and the drafting step stays there.
 
 ### Picking a local model size
 
