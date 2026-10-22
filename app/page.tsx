@@ -62,19 +62,11 @@ export default function Home() {
   const [narrationUrl, setNarrationUrl] = useState<string | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [elapsed, setElapsed] = useState(0);
-  // Read out by screen readers through the polite live region.
-  const [status, setStatus] = useState("");
-  const [saved, setSaved] = useState(false);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [outline, setOutline] = useState<BookOutline>(DEFAULT_OUTLINE);
 
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
-  const reviewHeadingRef = useRef<HTMLHeadingElement | null>(null);
-
-  // When a draft lands, take keyboard and screen reader users to it.
-  useEffect(() => {
-    if (draft) reviewHeadingRef.current?.focus();
-  }, [draft]);
 
   useEffect(() => {
     try {
@@ -143,22 +135,19 @@ export default function Home() {
         stream.getTracks().forEach((t) => t.stop());
         setAudioBlob(new Blob(chunksRef.current, { type: rec.mimeType || "audio/webm" }));
         setAudioName("dictation.webm");
-        setStatus("Recording stopped. Ready to transcribe.");
       };
       recorderRef.current = rec;
       rec.start();
       setRecording(true);
-      setStatus("Recording.");
     } catch {
       setError("Microphone access was blocked. You can upload an audio file or paste a transcript instead.");
     }
   }
 
   async function transcribe() {
-    if (!audioBlob || busy) return;
+    if (!audioBlob) return;
     setBusy("transcribe");
     setError(null);
-    setStatus("Transcribing with Scribe.");
     try {
       const form = new FormData();
       form.append("file", audioBlob, audioName || "dictation.webm");
@@ -166,19 +155,15 @@ export default function Home() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Transcription failed.");
       setTranscript(data.transcript);
-      setStatus("Transcript ready.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Transcription failed.");
-      setStatus("");
     } finally {
       setBusy(null);
     }
   }
 
   async function makeDraft() {
-    if (busy) return;
     setBusy("draft");
-    setStatus("Gemma is drafting.");
     setError(null);
     setDraft(null);
     setNarrationUrl(null);
@@ -192,20 +177,15 @@ export default function Home() {
       if (!res.ok) throw new Error(data.error ?? "Drafting failed.");
       setDraft(data);
       setEditedDraft(data.cleanDraft);
-      setSaved(false);
-      setStatus(`Draft filed under ${data.partLabel}.`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Drafting failed.");
-      setStatus("");
     } finally {
       setBusy(null);
     }
   }
 
   async function narrate() {
-    if (busy) return;
     setBusy("narrate");
-    setStatus("ElevenLabs is reading.");
     setError(null);
     try {
       const res = await fetch("/api/narrate", {
@@ -219,13 +199,29 @@ export default function Home() {
       }
       const blob = await res.blob();
       setNarrationUrl(URL.createObjectURL(blob));
-      setStatus("Read-back ready. Press play on the audio player.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Narration failed.");
-      setStatus("");
     } finally {
       setBusy(null);
     }
+  }
+
+  // Copy a draft in manuscript shape: the suggested title as a heading line,
+  // a blank line, then the draft text, ready to paste into the book document.
+  async function copyForManuscript(key: string, title: string, text: string) {
+    const payload = `${title}\n\n${text}`;
+    try {
+      await navigator.clipboard.writeText(payload);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = payload;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    }
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey((c) => (c === key ? null : c)), 2500);
   }
 
   function saveEntry() {
@@ -239,8 +235,6 @@ export default function Home() {
     };
     const next = [entry, ...entries];
     setEntries(next);
-    setSaved(true);
-    setStatus(`Saved to ${draft.partLabel}.`);
     try {
       localStorage.setItem(ENTRIES_KEY, JSON.stringify(next));
     } catch {
@@ -287,14 +281,7 @@ export default function Home() {
         ))}
       </ol>
 
-      {error && (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      )}
-      <p className="sr-only" aria-live="polite">
-        {status}
-      </p>
+      {error && <p className="error">{error}</p>}
 
       <section className="card">
         <p className="step-label">Step 1 · Talk</p>
@@ -305,39 +292,40 @@ export default function Home() {
         </p>
         <div className="row">
           <button onClick={toggleRecording} className={`cta record ${recording ? "recording" : ""}`}>
-            <span aria-hidden="true">{recording ? "■" : "●"}</span>{" "}
-            {recording ? "Stop recording" : "Record a dictation"}
+            {recording ? "■ Stop recording" : "● Record a dictation"}
           </button>
           {recording && (
             <span className="timer" aria-live="off">
               REC {formatElapsed(elapsed)}
             </span>
           )}
-          {/* The input stays in the tab order but is visually hidden; the
-              label shows its focus ring via :focus-within. */}
-          <label className="cta secondary upload">
+          <label className="cta secondary" style={{ display: "inline-block", cursor: "pointer" }}>
             Upload audio
             <input
               type="file"
               accept="audio/*"
-              className="sr-only"
+              className="file-input"
+              style={{ display: "none" }}
               onChange={(e) => {
                 const f = e.target.files?.[0];
                 if (f) {
                   setAudioBlob(f);
                   setAudioName(f.name);
-                  setStatus(`Ready to transcribe ${f.name}.`);
                 }
               }}
             />
           </label>
-          <button className="cta secondary" onClick={() => setTranscript(SAMPLE_DICTATION)}>
+          <button
+            className="cta secondary"
+            onClick={() => setTranscript(SAMPLE_DICTATION)}
+            title="A demo dictation, not a real memory, for trying the draft step"
+          >
             Load sample dictation
           </button>
         </div>
         {audioBlob && (
           <div className="row">
-            <button onClick={transcribe} aria-disabled={busy !== null} className="cta">
+            <button onClick={transcribe} disabled={busy !== null} className="cta">
               {busy === "transcribe" ? "Scribe is listening..." : "Transcribe with ElevenLabs Scribe"}
             </button>
             <span className="meta">
@@ -346,34 +334,18 @@ export default function Home() {
           </div>
         )}
         <p className="hint">
-          No mic or no key? Paste a transcript below instead, or load the sample, a made-up demo
-          memory. The draft step works either way.
+          No mic or no key? Paste a transcript here instead. The draft step works either way.
         </p>
-        <label htmlFor="transcript" className="field-label">
-          Transcript
-        </label>
         <textarea
-          id="transcript"
           rows={6}
           value={transcript}
           onChange={(e) => setTranscript(e.target.value)}
           placeholder="Your transcript will appear here, or paste one..."
         />
         <div className="row">
-          <button
-            onClick={makeDraft}
-            disabled={transcript.trim().length < 20}
-            aria-disabled={busy !== null}
-            aria-describedby={transcript.trim().length < 20 ? "draft-needs" : undefined}
-            className="cta"
-          >
+          <button onClick={makeDraft} disabled={busy !== null || transcript.trim().length < 20} className="cta">
             {busy === "draft" ? "Gemma is drafting..." : "Clean it up and file it (Gemma)"}
           </button>
-          {transcript.trim().length < 20 && (
-            <span id="draft-needs" className="meta">
-              Add a transcript of at least a sentence to continue.
-            </span>
-          )}
         </div>
         <p className="meta">
           Drafting runs on local Gemma first (Ollama), with AI Studio as a fallback. Your
@@ -384,9 +356,7 @@ export default function Home() {
       {draft && (
         <section className="card" data-part={draft.partId}>
           <p className="step-label">Step 2 · Review</p>
-          <h2 ref={reviewHeadingRef} tabIndex={-1}>
-            Your draft, filed
-          </h2>
+          <h2>Your draft, filed</h2>
           <div className="filing">
             <p className="draft-title">{draft.titleSuggestion}</p>
             <p>
@@ -400,10 +370,7 @@ export default function Home() {
           <textarea
             rows={10}
             value={editedDraft}
-            onChange={(e) => {
-              setEditedDraft(e.target.value);
-              setSaved(false);
-            }}
+            onChange={(e) => setEditedDraft(e.target.value)}
             aria-label="Cleaned draft, edit before listening or saving"
           />
           <p className="meta">
@@ -420,16 +387,17 @@ export default function Home() {
             </select>
           </div>
           <div className="row">
-            <button
-              onClick={narrate}
-              disabled={!editedDraft.trim()}
-              aria-disabled={busy !== null}
-              className="cta"
-            >
+            <button onClick={narrate} disabled={busy !== null || !editedDraft.trim()} className="cta">
               {busy === "narrate" ? "ElevenLabs is reading..." : "Hear it read back"}
             </button>
-            <button onClick={saveEntry} disabled={saved} className="cta secondary">
-              {saved ? "Saved to my dictations" : "Save to my dictations"}
+            <button onClick={saveEntry} className="cta secondary">
+              Save to my dictations
+            </button>
+            <button
+              onClick={() => copyForManuscript("draft", draft.titleSuggestion, editedDraft)}
+              className="cta secondary"
+            >
+              {copiedKey === "draft" ? "Copied, paste it in" : "Copy draft for the manuscript"}
             </button>
           </div>
           {narrationUrl && <audio controls src={narrationUrl} />}
@@ -454,6 +422,14 @@ export default function Home() {
                       <p className="meta" style={{ margin: 0 }}>
                         {en.savedAt} · {en.draft.split(/\s+/).length} words
                       </p>
+                      <div className="row" style={{ marginTop: "0.5rem" }}>
+                        <button
+                          onClick={() => copyForManuscript(`entry-${part.id}-${i}`, en.title, en.draft)}
+                          className="cta secondary"
+                        >
+                          {copiedKey === `entry-${part.id}-${i}` ? "Copied, paste it in" : "Copy for the manuscript"}
+                        </button>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -487,7 +463,7 @@ export default function Home() {
             fontSize: "1rem",
             background: "var(--field)",
             color: "var(--ink)",
-            border: "2px solid var(--field-line)",
+            border: "2px solid var(--line)",
             borderRadius: 0,
             marginBottom: "1rem",
           }}
@@ -513,7 +489,7 @@ export default function Home() {
                     fontSize: "1rem",
                     background: "var(--field)",
                     color: "var(--ink)",
-                    border: "2px solid var(--field-line)",
+                    border: "2px solid var(--line)",
                     borderRadius: 0,
                     marginBottom: "0.6rem",
                   }}
@@ -535,7 +511,6 @@ export default function Home() {
                     className="cta secondary"
                   >
                     Remove this part
-                    <span className="sr-only">: part {i + 1}</span>
                   </button>
                 </div>
               </div>
