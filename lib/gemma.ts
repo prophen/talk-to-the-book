@@ -62,7 +62,11 @@ async function tryLocal(
   return { text, source: "local", model: LOCAL_MODEL };
 }
 
-async function tryCloud(system: string, user: string): Promise<GemmaResult> {
+async function tryCloud(
+  system: string,
+  user: string,
+  thinkingOff: boolean = true
+): Promise<GemmaResult> {
   const apiKey = process.env.GOOGLE_AI_STUDIO_KEY;
   if (!apiKey) throw new Error("Missing GOOGLE_AI_STUDIO_KEY for the cloud fallback.");
   const res = await fetch(
@@ -73,12 +77,25 @@ async function tryCloud(system: string, user: string): Promise<GemmaResult> {
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: system }] },
         contents: [{ parts: [{ text: user }] }],
-        generationConfig: { temperature: 0.4, responseMimeType: "application/json" },
+        generationConfig: {
+          temperature: 0.4,
+          responseMimeType: "application/json",
+          // The 26B thinks by default, and the thinking is most of the wait
+          // (and most of the tokens) for a draft-and-file job that does not
+          // need it, so ask for a zero thinking budget. Not every Gemma
+          // accepts the knob: the 31B rejects it with a 400, so a thinking
+          // error retries once without it, mirroring the local think flag.
+          ...(thinkingOff ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+        },
       }),
       signal: AbortSignal.timeout(120_000),
     }
   );
-  if (!res.ok) throw new Error(`AI Studio ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  if (!res.ok) {
+    const detail = (await res.text()).slice(0, 300);
+    if (thinkingOff && /thinking/i.test(detail)) return tryCloud(system, user, false);
+    throw new Error(`AI Studio ${res.status}: ${detail.slice(0, 200)}`);
+  }
   const data = await res.json();
   // A thinking model can return its thoughts as a separate part ahead of the
   // answer, so join the non-thought parts instead of taking the first one.
