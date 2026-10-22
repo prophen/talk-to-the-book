@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Archivo, Source_Serif_4 } from "next/font/google";
+import { BRAND, SITE_DESCRIPTION, SITE_NAME } from "@/lib/brand";
 import "./globals.css";
 
 // Archivo carries the UI and the condensed headlines (its width axis does the
@@ -18,10 +19,41 @@ const sourceSerif = Source_Serif_4({
   display: "swap",
 });
 
+// Share links need absolute image URLs. Set NEXT_PUBLIC_SITE_URL to the public
+// address; on Vercel the production domain is picked up without it.
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : "http://localhost:3000");
+
+// The favicon, Apple icon and share images come from the icon, apple-icon,
+// opengraph-image and twitter-image files in this folder.
 export const metadata: Metadata = {
-  title: "Talk to the Book",
-  description:
-    "Dictate a memory. Gemma running locally cleans it into a draft and files it into your book. ElevenLabs reads it back.",
+  metadataBase: new URL(siteUrl),
+  title: SITE_NAME,
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    url: "/",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: BRAND.bg },
+    { media: "(prefers-color-scheme: dark)", color: "#1b1120" },
+  ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
