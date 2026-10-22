@@ -69,6 +69,8 @@ export default function Home() {
   const [saved, setSaved] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [outline, setOutline] = useState<BookOutline>(DEFAULT_OUTLINE);
+  const [editingOutline, setEditingOutline] = useState(false);
+  const outlineToggleRef = useRef<HTMLButtonElement>(null);
 
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -532,73 +534,114 @@ export default function Home() {
             {outline.title}, in {outline.parts.length} {outline.parts.length === 1 ? "part" : "parts"}
           </h2>
           <p className="hint">
-            Built for {DEFAULT_OUTLINE.title}, and that book is the default below. Writing your
-            own? Change the title and the parts, in your words, and Gemma files your dictations
-            against your outline instead. Saved only in this browser.
+            Built for {DEFAULT_OUTLINE.title}, and that book is the default. Writing your own?
+            Edit the outline to change the title and the parts, in your words, and Gemma files
+            your dictations against your outline instead. Saved only in this browser.
           </p>
-          <label className="label" htmlFor="book-title">
-            Book title
-          </label>
-          <input
-            id="book-title"
-            type="text"
-            value={outline.title}
-            onChange={(e) => updateOutline({ ...outline, title: e.target.value })}
-            className="text-input"
-          />
-          <ul className="parts-list">
-            {outline.parts.map((p, i) => (
-              <li key={p.id} data-part={p.id}>
-                <span className="num-block" aria-hidden="true">
-                  {i + 1}
-                </span>
-                <div className="part-fields">
-                  <label className="label" htmlFor={`part-label-${p.id}`}>
-                    Part name
-                  </label>
-                  <input
-                    id={`part-label-${p.id}`}
-                    type="text"
-                    value={p.label}
-                    onChange={(e) => updatePart(i, { label: e.target.value })}
-                    className="text-input tight"
-                  />
-                  <label className="label" htmlFor={`part-covers-${p.id}`}>
-                    What belongs in this part?
-                  </label>
-                  <textarea
-                    id={`part-covers-${p.id}`}
-                    rows={2}
-                    value={p.covers}
-                    onChange={(e) => updatePart(i, { covers: e.target.value })}
-                    placeholder="Themes, years, people, places. This is how Gemma decides a memory belongs here."
-                  />
-                  <div className="row">
-                    <button
-                      onClick={() => removePart(i)}
-                      disabled={outline.parts.length <= 1}
-                      className="cta secondary"
-                    >
-                      Remove this part
-                      <span className="sr-only">: part {i + 1}</span>
-                    </button>
+          {!editingOutline && (
+            <ol className="parts-list" aria-label={`Parts of ${outline.title}`}>
+              {outline.parts.map((p, i) => (
+                <li key={p.id} data-part={p.id}>
+                  <span className="num-block" aria-hidden="true">
+                    {i + 1}
+                  </span>
+                  <div>
+                    <p className="part-name">{p.label.trim() || `Part ${i + 1}`}</p>
+                    <p className="part-covers">{p.covers.trim() || "No description yet."}</p>
                   </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-          <div className="row">
-            <button onClick={addPart} disabled={outline.parts.length >= 12} className="cta secondary">
-              Add a part
-            </button>
-            <button onClick={() => updateOutline(DEFAULT_OUTLINE)} className="cta secondary">
-              Reset to {DEFAULT_OUTLINE.title}
+                </li>
+              ))}
+            </ol>
+          )}
+          <div>
+            <button
+              ref={outlineToggleRef}
+              type="button"
+              className="link-button"
+              aria-expanded={editingOutline}
+              aria-controls="outline-editor"
+              onClick={() => setEditingOutline((open) => !open)}
+            >
+              {editingOutline ? "Done editing" : "Edit the outline"}
             </button>
           </div>
-          <p className="meta">
-            Edits apply to the next dictation you draft. Dictations already saved keep the
-            part they were filed under.
-          </p>
+          <div id="outline-editor" className="outline-editor" hidden={!editingOutline}>
+            <div>
+              <label className="label" htmlFor="book-title">
+                Book title
+              </label>
+              <input
+                id="book-title"
+                type="text"
+                value={outline.title}
+                onChange={(e) => updateOutline({ ...outline, title: e.target.value })}
+                className="text-input tight"
+              />
+            </div>
+            <ul className="parts-list">
+              {outline.parts.map((p, i) => (
+                <li key={p.id} data-part={p.id}>
+                  <span className="num-block" aria-hidden="true">
+                    {i + 1}
+                  </span>
+                  <div className="part-fields">
+                    <label className="label" htmlFor={`part-label-${p.id}`}>
+                      Part name
+                    </label>
+                    <input
+                      id={`part-label-${p.id}`}
+                      type="text"
+                      value={p.label}
+                      onChange={(e) => updatePart(i, { label: e.target.value })}
+                      className="text-input tight"
+                    />
+                    <label className="label" htmlFor={`part-covers-${p.id}`}>
+                      What belongs in this part?
+                    </label>
+                    <textarea
+                      id={`part-covers-${p.id}`}
+                      rows={2}
+                      value={p.covers}
+                      onChange={(e) => updatePart(i, { covers: e.target.value })}
+                      placeholder="Themes, years, people, places. This is how Gemma decides a memory belongs here."
+                    />
+                    <div className="row">
+                      <button
+                        onClick={() => removePart(i)}
+                        disabled={outline.parts.length <= 1}
+                        className="cta secondary"
+                      >
+                        Remove this part
+                        <span className="sr-only">: part {i + 1}</span>
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <div className="row">
+              <button
+                type="button"
+                className="cta"
+                onClick={() => {
+                  setEditingOutline(false);
+                  outlineToggleRef.current?.focus();
+                }}
+              >
+                Done editing
+              </button>
+              <button onClick={addPart} disabled={outline.parts.length >= 12} className="cta secondary">
+                Add a part
+              </button>
+              <button onClick={() => updateOutline(DEFAULT_OUTLINE)} className="cta secondary">
+                Reset to {DEFAULT_OUTLINE.title}
+              </button>
+            </div>
+            <p className="meta">
+              Edits apply to the next dictation you draft. Dictations already saved keep the
+              part they were filed under.
+            </p>
+          </div>
         </section>
       </main>
       {busy === "draft" && (
