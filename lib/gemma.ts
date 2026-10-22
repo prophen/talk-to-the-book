@@ -80,7 +80,13 @@ async function tryCloud(system: string, user: string): Promise<GemmaResult> {
   );
   if (!res.ok) throw new Error(`AI Studio ${res.status}: ${(await res.text()).slice(0, 200)}`);
   const data = await res.json();
-  const text: string | undefined = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  // A thinking model can return its thoughts as a separate part ahead of the
+  // answer, so join the non-thought parts instead of taking the first one.
+  const parts: { text?: string; thought?: boolean }[] = data?.candidates?.[0]?.content?.parts ?? [];
+  const text = parts
+    .filter((p) => !p.thought)
+    .map((p) => p.text ?? "")
+    .join("");
   if (!text) throw new Error("Empty response from cloud Gemma.");
   return { text, source: "cloud", model: CLOUD_MODEL };
 }

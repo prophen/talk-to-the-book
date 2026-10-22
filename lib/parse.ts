@@ -24,5 +24,49 @@ export function parseGemmaJson<T>(raw: string): T {
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
   if (start === -1 || end <= start) throw new Error("No JSON object found in model reply.");
-  return JSON.parse(text.slice(start, end + 1)) as T;
+  const candidate = text.slice(start, end + 1);
+  try {
+    return JSON.parse(candidate) as T;
+  } catch {
+    return JSON.parse(repairJson(candidate)) as T;
+  }
+}
+
+// Fix the near-misses Gemma produces most: raw line breaks or tabs inside a
+// string (a multi-paragraph cleanDraft) and trailing commas before a closing
+// brace or bracket.
+export function repairJson(text: string): string {
+  let out = "";
+  let inString = false;
+  let escaped = false;
+  for (const ch of text) {
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+        out += ch;
+      } else if (ch === "\\") {
+        escaped = true;
+        out += ch;
+      } else if (ch === '"') {
+        inString = false;
+        out += ch;
+      } else if (ch === "\n") {
+        out += "\\n";
+      } else if (ch === "\r") {
+        // dropped; \n carries the line break
+      } else if (ch === "\t") {
+        out += "\\t";
+      } else {
+        out += ch;
+      }
+    } else if (ch === '"') {
+      inString = true;
+      out += ch;
+    } else if (ch === "}" || ch === "]") {
+      out = out.replace(/,\s*$/, "") + ch;
+    } else {
+      out += ch;
+    }
+  }
+  return out;
 }

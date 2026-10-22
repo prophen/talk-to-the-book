@@ -37,33 +37,53 @@ export async function POST(req: Request) {
   const user = `The book is "${outline.title}". Here are its parts:\n${partsList}\n\nRaw dictation transcript:\n"""\n${transcript}\n"""\n\nReturn JSON with exactly these keys:\n{\n  "titleSuggestion": "a short working title for this memory, in the author's words where possible",\n  "cleanDraft": "the cleaned first draft of the dictation, paragraphs separated by \\n\\n",\n  "partId": "one of the part ids above",\n  "suggestedSection": "a short phrase naming the section or chapter topic this belongs in",\n  "reason": "one sentence on why it files there"\n}`;
 
   let result;
-  try {
-    result = await gemmaJson(systemFor(outline.title), user);
-  } catch (e) {
-    return Response.json(
-      {
-        error:
-          "Gemma is unreachable. For local mode, start Ollama and pull the model (see README). For cloud mode, set GEMMA_MODE=cloud and add GOOGLE_AI_STUDIO_KEY.",
-        detail: e instanceof Error ? e.message.slice(0, 300) : String(e),
-      },
-      { status: 502 }
-    );
-  }
-
   let parsed: {
     titleSuggestion: string;
     cleanDraft: string;
     partId: string;
     suggestedSection: string;
     reason: string;
-  };
-  try {
-    // Local Gemma can wrap its JSON in fences or a thought block, so this is
-    // a tolerant extract, not a bare JSON.parse. See lib/parse.ts.
-    parsed = parseGemmaJson(result.text);
-  } catch {
+  } | null = null;
+  // One retry: a reply that still is not JSON after the tolerant parse is
+  // usually a one-off (cut short, or prose around it), and a second ask with
+  // a firmer reminder almost always comes back clean.
+  for (let attempt = 0; attempt < 2 && !parsed; attempt++) {
+    const prompt =
+      attempt === 0
+        ? user
+        : `${user}\n\nYour previous reply could not be parsed. Reply with the JSON object only: no prose, no markdown, every string on one line with \\n for line breaks.`;
+    try {
+      result = await gemmaJson(systemFor(outline.title), prompt);
+    } catch (e) {
+      return Response.json(
+        {
+          error:
+            "Gemma is unreachable. For local mode, start Ollama and pull the model (see README). For cloud mode, set GEMMA_MODE=cloud and add GOOGLE_AI_STUDIO_KEY.",
+          detail: e instanceof Error ? e.message.slice(0, 300) : String(e),
+        },
+        { status: 502 }
+      );
+    }
+    try {
+      // Local Gemma can wrap its JSON in fences or a thought block, so this is
+      // a tolerant extract, not a bare JSON.parse. See lib/parse.ts.
+      parsed = parseGemmaJson(result.text);
+    } catch (e) {
+      console.error(
+        `Gemma non-JSON reply (${result.source}: ${result.model}, attempt ${attempt + 1}):`,
+        e instanceof Error ? e.message : e,
+        "\n",
+        result.text.slice(0, 2000)
+      );
+    }
+  }
+
+  if (!parsed || !result) {
     return Response.json(
-      { error: "Gemma returned non-JSON.", raw: result.text.slice(0, 300) },
+      {
+        error: "Gemma's reply wasn't valid JSON, even after a retry. Try again, or try a shorter dictation.",
+        raw: result?.text.slice(0, 300),
+      },
       { status: 502 }
     );
   }
