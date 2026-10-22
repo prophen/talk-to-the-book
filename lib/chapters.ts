@@ -64,24 +64,48 @@ export const DEFAULT_OUTLINE: BookOutline = {
 const deriveShort = (label: string): string =>
   label.replace(/^part\s+\d+\s*:\s*/i, "").split(",")[0].trim() || label;
 
+const cleanLine = (value: string, max: number): string =>
+  value
+    .replace(/[\u0000-\u001F\u007F]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, max);
+
+const cleanId = (value: string, fallback: string): string => {
+  const cleaned = value
+    .trim()
+    .replace(/[^a-zA-Z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+  return cleaned || fallback;
+};
+
 /** Clean up an outline arriving from the client, or fall back to the default. */
 export function sanitizeOutline(input: unknown): BookOutline {
   if (!input || typeof input !== "object") return DEFAULT_OUTLINE;
   const raw = input as { title?: unknown; parts?: unknown };
+  // Outline fields are interpolated into the Gemma prompt, so every field is
+  // flattened to a single line here: embedded newlines or control characters
+  // in a title, label, or "covers" note must not be able to pose as prompt
+  // structure. The fields stay data; the draft route says so explicitly too.
   const title =
-    typeof raw.title === "string" && raw.title.trim() ? raw.title.trim().slice(0, 120) : DEFAULT_OUTLINE.title;
+    typeof raw.title === "string" && cleanLine(raw.title, 120)
+      ? cleanLine(raw.title, 120)
+      : DEFAULT_OUTLINE.title;
   if (!Array.isArray(raw.parts)) return { title, parts: DEFAULT_OUTLINE.parts };
   const parts: BookPart[] = raw.parts
     .filter((p): p is Record<string, unknown> => !!p && typeof p === "object")
     .map((p, i) => {
       const label =
-        typeof p.label === "string" && p.label.trim() ? p.label.trim().slice(0, 160) : `Part ${i + 1}`;
+        typeof p.label === "string" && cleanLine(p.label, 160)
+          ? cleanLine(p.label, 160)
+          : `Part ${i + 1}`;
+      const short = typeof p.short === "string" ? cleanLine(p.short, 60) : "";
       return {
-        id: typeof p.id === "string" && p.id.trim() ? p.id.trim().slice(0, 60) : `part-${i + 1}`,
+        id: typeof p.id === "string" ? cleanId(p.id, `part-${i + 1}`) : `part-${i + 1}`,
         label,
-        short:
-          typeof p.short === "string" && p.short.trim() ? p.short.trim().slice(0, 60) : deriveShort(label),
-        covers: typeof p.covers === "string" ? p.covers.trim().slice(0, 600) : "",
+        short: short || deriveShort(label),
+        covers: typeof p.covers === "string" ? cleanLine(p.covers, 600) : "",
       };
     })
     .slice(0, 12);
