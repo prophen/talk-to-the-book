@@ -1,5 +1,6 @@
 import { BOOK_PARTS, partById } from "@/lib/chapters";
 import { gemmaJson } from "@/lib/gemma";
+import { parseGemmaJson } from "@/lib/parse";
 
 const SYSTEM = `You are the drafting assistant for a memoir called "My Story" by Nikema.
 She dictates memories out loud. Your job is to turn a raw spoken transcript into
@@ -53,7 +54,9 @@ export async function POST(req: Request) {
     reason: string;
   };
   try {
-    parsed = JSON.parse(result.text);
+    // Local Gemma can wrap its JSON in fences or a thought block, so this is
+    // a tolerant extract, not a bare JSON.parse. See lib/parse.ts.
+    parsed = parseGemmaJson(result.text);
   } catch {
     return Response.json(
       { error: "Gemma returned non-JSON.", raw: result.text.slice(0, 300) },

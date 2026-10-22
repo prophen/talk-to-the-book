@@ -21,7 +21,11 @@ export interface GemmaResult {
   model: string;
 }
 
-async function tryLocal(system: string, user: string): Promise<GemmaResult> {
+async function tryLocal(
+  system: string,
+  user: string,
+  think: boolean | undefined = false
+): Promise<GemmaResult> {
   const res = await fetch(`${OLLAMA_BASE}/api/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -29,16 +33,28 @@ async function tryLocal(system: string, user: string): Promise<GemmaResult> {
       model: LOCAL_MODEL,
       stream: false,
       format: "json",
+      // Gemma 4 is a thinking model. Thinking here is pure cost: it burns
+      // tokens (and minutes on an M1) and can leak reasoning into the reply
+      // ahead of the JSON. Drafting and filing do not need it, so turn it off.
+      ...(think !== undefined ? { think } : {}),
       // Ollama defaults Gemma 4 to a 4K context window. A dictated chapter
       // memory plus instructions needs more, so ask for 16K explicitly.
-      options: { num_ctx: 16384, temperature: 0.4 },
+      // num_predict gives the whole cleaned draft room to finish: a truncated
+      // reply is invalid JSON.
+      options: { num_ctx: 16384, num_predict: 3072, temperature: 0.4 },
       messages: [
         { role: "system", content: system },
         { role: "user", content: user },
       ],
     }),
-    signal: AbortSignal.timeout(120_000),
+    signal: AbortSignal.timeout(300_000),
   });
+  // Older Ollama / model builds may reject the think flag itself. Retry once
+  // without it rather than failing the draft.
+  if (!res.ok && think !== undefined) {
+    const detail = await res.clone().text().catch(() => "");
+    if (/think/i.test(detail)) return tryLocal(system, user, undefined);
+  }
   if (!res.ok) throw new Error(`Ollama ${res.status}: ${(await res.text()).slice(0, 200)}`);
   const data = await res.json();
   const text: string | undefined = data?.message?.content;
