@@ -22,12 +22,24 @@ interface DraftResult {
 
 interface Entry {
   title: string;
+  // Older saved entries predate partId; they are matched by label instead.
+  partId?: string;
   partLabel: string;
   draft: string;
   savedAt: string;
 }
 
 const ENTRIES_KEY = "ttb-entries";
+
+function entryPartId(en: Entry): string {
+  return en.partId ?? BOOK_PARTS.find((p) => p.label === en.partLabel)?.id ?? BOOK_PARTS[0].id;
+}
+
+function formatElapsed(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
 
 export default function Home() {
   const [recording, setRecording] = useState(false);
@@ -41,6 +53,7 @@ export default function Home() {
   const [voiceId, setVoiceId] = useState(VOICE_PRESETS[0].id);
   const [narrationUrl, setNarrationUrl] = useState<string | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
+  const [elapsed, setElapsed] = useState(0);
 
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -53,6 +66,14 @@ export default function Home() {
       /* fresh book */
     }
   }, []);
+
+  useEffect(() => {
+    if (!recording) return;
+    setElapsed(0);
+    const started = Date.now();
+    const id = setInterval(() => setElapsed(Math.floor((Date.now() - started) / 1000)), 500);
+    return () => clearInterval(id);
+  }, [recording]);
 
   async function toggleRecording() {
     if (recording) {
@@ -145,6 +166,7 @@ export default function Home() {
     if (!draft) return;
     const entry: Entry = {
       title: draft.titleSuggestion,
+      partId: draft.partId,
       partLabel: draft.partLabel,
       draft: editedDraft,
       savedAt: new Date().toLocaleString(),
@@ -157,6 +179,12 @@ export default function Home() {
       /* ignore */
     }
   }
+
+  const countByPart = (id: string) => entries.filter((en) => entryPartId(en) === id).length;
+  const groups = BOOK_PARTS.map((p) => ({
+    part: p,
+    items: entries.filter((en) => entryPartId(en) === p.id),
+  })).filter((g) => g.items.length > 0);
 
   return (
     <main className="page">
@@ -171,6 +199,23 @@ export default function Home() {
         </p>
       </header>
 
+      <ol className={`strip ${draft ? "has-filing" : ""}`} aria-label="The four parts of My Story">
+        {BOOK_PARTS.map((p, i) => (
+          <li
+            key={p.id}
+            data-part={p.id}
+            className={draft?.partId === p.id ? "on" : ""}
+            aria-current={draft?.partId === p.id ? "true" : undefined}
+          >
+            <span className="num">Part {i + 1}</span>
+            <span className="name">{p.short}</span>
+            <span className="count">
+              {countByPart(p.id)} {countByPart(p.id) === 1 ? "dictation" : "dictations"}
+            </span>
+          </li>
+        ))}
+      </ol>
+
       {error && <p className="error">{error}</p>}
 
       <section className="card">
@@ -180,10 +225,15 @@ export default function Home() {
           Ramble is fine. Filler, false starts, and going in circles are the machine's
           problem now, not yours.
         </p>
-        <div className="row" style={{ marginTop: 0 }}>
-          <button onClick={toggleRecording} className={`cta ${recording ? "recording" : ""}`}>
-            {recording ? "Stop recording" : "● Record a dictation"}
+        <div className="row">
+          <button onClick={toggleRecording} className={`cta record ${recording ? "recording" : ""}`}>
+            {recording ? "■ Stop recording" : "● Record a dictation"}
           </button>
+          {recording && (
+            <span className="timer" aria-live="off">
+              REC {formatElapsed(elapsed)}
+            </span>
+          )}
           <label className="cta secondary" style={{ display: "inline-block", cursor: "pointer" }}>
             Upload audio
             <input
@@ -213,12 +263,12 @@ export default function Home() {
             <button onClick={transcribe} disabled={busy !== null} className="cta">
               {busy === "transcribe" ? "Scribe is listening..." : "Transcribe with ElevenLabs Scribe"}
             </button>
-            <span className="meta" style={{ alignSelf: "center" }}>
+            <span className="meta">
               Ready: {audioName || "recording"} ({Math.round(audioBlob.size / 1024)} KB)
             </span>
           </div>
         )}
-        <p className="hint" style={{ marginTop: "1rem" }}>
+        <p className="hint">
           No mic or no key? Paste a transcript here instead. The draft step works either way.
         </p>
         <textarea
@@ -239,7 +289,7 @@ export default function Home() {
       </section>
 
       {draft && (
-        <section className="card">
+        <section className="card" data-part={draft.partId}>
           <p className="step-label">Step 2 · Review</p>
           <h2>Your draft, filed</h2>
           <div className="filing">
@@ -250,7 +300,7 @@ export default function Home() {
             <p>
               <strong>Suggested section:</strong> {draft.suggestedSection}
             </p>
-            <p>{draft.reason}</p>
+            <p className="reason">{draft.reason}</p>
           </div>
           <textarea
             rows={10}
@@ -283,34 +333,46 @@ export default function Home() {
         </section>
       )}
 
-      {entries.length > 0 && (
+      {groups.length > 0 && (
         <section className="card">
           <p className="step-label">Your dictations</p>
           <h2>Saved on this device</h2>
-          <ul className="entries">
-            {entries.map((en, i) => (
-              <li key={i}>
-                <span className="entry-part">{en.partLabel}</span>
-                <p style={{ margin: "0.2rem 0", fontWeight: 700 }}>{en.title}</p>
-                <p className="meta" style={{ margin: 0 }}>
-                  {en.savedAt} · {en.draft.split(/\s+/).length} words
-                </p>
-              </li>
+          <div className="groups">
+            {groups.map(({ part, items }) => (
+              <div className="group" key={part.id} data-part={part.id}>
+                <h3>
+                  <span className="swatch" aria-hidden="true" />
+                  {part.label}
+                </h3>
+                <ul className="entries">
+                  {items.map((en, i) => (
+                    <li key={i}>
+                      <p className="entry-title">{en.title}</p>
+                      <p className="meta" style={{ margin: 0 }}>
+                        {en.savedAt} · {en.draft.split(/\s+/).length} words
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ))}
-          </ul>
+          </div>
         </section>
       )}
 
       <section className="card">
         <p className="step-label">The book it feeds</p>
         <h2>My Story, in four parts</h2>
-        <ul className="entries">
-          {BOOK_PARTS.map((p) => (
-            <li key={p.id}>
-              <p style={{ margin: "0.2rem 0", fontWeight: 700 }}>{p.label}</p>
-              <p className="hint" style={{ margin: 0 }}>
-                {p.covers}
-              </p>
+        <ul className="parts-list">
+          {BOOK_PARTS.map((p, i) => (
+            <li key={p.id} data-part={p.id}>
+              <span className="num-block" aria-hidden="true">
+                {i + 1}
+              </span>
+              <div>
+                <p className="part-name">{p.label}</p>
+                <p className="hint">{p.covers}</p>
+              </div>
             </li>
           ))}
         </ul>
