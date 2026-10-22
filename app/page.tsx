@@ -504,10 +504,10 @@ export default function Home() {
                     {items.map((en, i) => (
                       <li key={i}>
                         <p className="entry-title">{en.title}</p>
-                        <p className="meta" style={{ margin: 0 }}>
+                        <p className="meta">
                           {en.savedAt} · {en.draft.split(/\s+/).length} words
                         </p>
-                        <div className="row" style={{ marginTop: "0.5rem" }}>
+                        <div className="row entry-actions">
                           <button
                             onClick={() => copyForManuscript(`entry-${part.id}-${i}`, en.title, en.draft)}
                             className="cta secondary"
@@ -543,16 +543,7 @@ export default function Home() {
             type="text"
             value={outline.title}
             onChange={(e) => updateOutline({ ...outline, title: e.target.value })}
-            style={{
-              width: "100%",
-              padding: "0.7rem",
-              fontSize: "1rem",
-              background: "var(--field)",
-              color: "var(--ink)",
-              border: "2px solid var(--field-line)",
-              borderRadius: 0,
-              marginBottom: "1rem",
-            }}
+            className="text-input"
           />
           <ul className="parts-list">
             {outline.parts.map((p, i) => (
@@ -560,7 +551,7 @@ export default function Home() {
                 <span className="num-block" aria-hidden="true">
                   {i + 1}
                 </span>
-                <div style={{ flex: 1 }}>
+                <div className="part-fields">
                   <label className="label" htmlFor={`part-label-${p.id}`}>
                     Part name
                   </label>
@@ -569,16 +560,7 @@ export default function Home() {
                     type="text"
                     value={p.label}
                     onChange={(e) => updatePart(i, { label: e.target.value })}
-                    style={{
-                      width: "100%",
-                      padding: "0.7rem",
-                      fontSize: "1rem",
-                      background: "var(--field)",
-                      color: "var(--ink)",
-                      border: "2px solid var(--field-line)",
-                      borderRadius: 0,
-                      marginBottom: "0.6rem",
-                    }}
+                    className="text-input tight"
                   />
                   <label className="label" htmlFor={`part-covers-${p.id}`}>
                     What belongs in this part?
