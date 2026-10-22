@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { BOOK_PARTS, DEFAULT_OUTLINE, sanitizeOutline, type BookOutline, type BookPart } from "@/lib/chapters";
 import { VOICE_PRESETS } from "@/lib/voices";
 import DraftingOverlay from "./drafting-overlay";
+import ReadBackPlayer from "./read-back-player";
 
 const SAMPLE_DICTATION = `Um, so okay, I remember, I remember the kitchen table, right? Like, I would, I would get up before everybody else, before the house was awake, and I would just, you know, open the laptop and try to figure out one more thing before I had to get ready for work. And it was, it was slow, like, some mornings I literally only understood one little piece, but I wrote it down, I kept a notebook, and, and after a few months of that, I looked back at the notebook and I thought, oh, I actually know some things now. That was the first time I believed I could really do this.`;
 
@@ -244,7 +245,7 @@ export default function Home() {
       }
       const blob = await res.blob();
       setNarrationUrl(URL.createObjectURL(blob));
-      setStatus("Read-back ready. Press play on the audio player.");
+      setStatus("Read-back ready. Press play on the read-back player.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Narration failed.");
       setStatus("");
@@ -485,7 +486,7 @@ export default function Home() {
                 {copiedKey === "draft" ? "Copied, paste it in" : "Copy draft for the manuscript"}
               </button>
             </div>
-            {narrationUrl && <audio controls src={narrationUrl} />}
+            {narrationUrl && <ReadBackPlayer src={narrationUrl} />}
           </section>
         )}
 
