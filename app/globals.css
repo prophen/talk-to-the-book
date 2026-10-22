@@ -490,3 +490,217 @@ audio {
     padding: 1.15rem;
   }
 }
+
+/* Drafting overlay: a full-page scene while Gemma drafts. A four-color stripe
+   runs along the top, the transcript sits on a stack of part-colored pages
+   and loses its filler words, and the parts take turns lighting up. */
+
+body.drafting-open {
+  overflow: hidden;
+}
+
+.drafting {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: var(--bg);
+  overflow-y: auto;
+  display: flex;
+  padding: 3rem 1.25rem;
+  animation: drafting-in 0.25s ease-out;
+}
+
+@keyframes drafting-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.drafting-stripe {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 10px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.drafting-stripe span {
+  transform-origin: left;
+  animation: drafting-stripe 2.4s ease-in-out infinite;
+}
+.drafting-stripe span:nth-child(1) { background: var(--p1); }
+.drafting-stripe span:nth-child(2) { background: var(--p2); animation-delay: 0.15s; }
+.drafting-stripe span:nth-child(3) { background: var(--p3); animation-delay: 0.3s; }
+.drafting-stripe span:nth-child(4) { background: var(--p4); animation-delay: 0.45s; }
+
+@keyframes drafting-stripe {
+  0% {
+    transform: scaleX(0);
+  }
+  40%,
+  60% {
+    transform: scaleX(1);
+  }
+  100% {
+    transform: scaleX(0);
+  }
+}
+
+/* margin: auto centers without clipping the top when the scene is taller
+   than a short screen. */
+.drafting-inner {
+  margin: auto;
+  width: min(680px, 100%);
+  display: grid;
+  gap: 1.1rem;
+}
+
+.drafting h2 {
+  margin: 0;
+  font-size: clamp(2.6rem, 10vw, 4.75rem);
+  font-weight: 900;
+  font-stretch: 68%;
+  text-transform: uppercase;
+  line-height: 0.88;
+  letter-spacing: -0.01em;
+}
+
+/* Focus lands on the heading so screen readers announce the scene; it is
+   not a control, so it gets no ring. */
+.drafting h2:focus {
+  outline: none;
+}
+
+.drafting-accent {
+  color: var(--p4);
+}
+
+.drafting-caption {
+  margin: 0;
+  min-height: 1.6em;
+  font-family: var(--font-prose);
+  font-style: italic;
+  font-size: 1.15rem;
+  color: var(--muted);
+}
+
+.drafting-caption [aria-hidden] {
+  display: inline-block;
+  animation: drafting-caption 0.4s ease-out;
+}
+
+@keyframes drafting-caption {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* The transcript on a stack of pages, one edge per part color. */
+.drafting-page {
+  background: var(--surface);
+  border-top: 8px solid var(--ink);
+  padding: 1.25rem 1.4rem;
+  margin: 0 20px 20px 0;
+  box-shadow: 5px 5px 0 var(--p1), 10px 10px 0 var(--p2), 15px 15px 0 var(--p3),
+    20px 20px 0 var(--p4);
+}
+
+.drafting-page p {
+  margin: 0;
+  font-family: var(--font-prose);
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+.drafting-page .filler {
+  background: linear-gradient(var(--record-text), var(--record-text)) no-repeat 0 58% / 0% 3px;
+  animation: drafting-strike 1.1s ease-in-out var(--d, 0s) forwards;
+}
+
+@keyframes drafting-strike {
+  35% {
+    background-size: 100% 3px;
+    color: var(--ink);
+    font-size: 1em;
+    opacity: 1;
+  }
+  65% {
+    background-size: 100% 3px;
+    color: var(--muted);
+    font-size: 1em;
+    opacity: 1;
+  }
+  100% {
+    background-size: 100% 3px;
+    color: var(--muted);
+    font-size: 0;
+    opacity: 0;
+  }
+}
+
+/* The parts take turns, as if Gemma is choosing where the memory files.
+   Colors cycle by position so a custom outline gets the same four. */
+.drafting-parts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  gap: 6px;
+}
+
+.drafting-parts li {
+  --part: var(--p1);
+  --part-on: var(--on-dark);
+  background: color-mix(in srgb, var(--part) 22%, var(--surface));
+  color: var(--ink);
+  padding: 0.6rem 0.7rem;
+  font-weight: 800;
+  font-stretch: 85%;
+  font-size: 0.9rem;
+  line-height: 1.15;
+  animation: drafting-pick calc(var(--n) * 0.7s) ease-in-out calc(var(--i) * 0.7s) infinite;
+}
+.drafting-parts li:nth-child(4n + 2) { --part: var(--p2); --part-on: var(--on-light); }
+.drafting-parts li:nth-child(4n + 3) { --part: var(--p3); }
+.drafting-parts li:nth-child(4n + 4) { --part: var(--p4); }
+
+@keyframes drafting-pick {
+  5%,
+  20% {
+    background: var(--part);
+    color: var(--part-on);
+    transform: translateY(-4px);
+  }
+  28% {
+    background: color-mix(in srgb, var(--part) 22%, var(--surface));
+    color: var(--ink);
+    transform: none;
+  }
+}
+
+.drafting-foot {
+  justify-content: space-between;
+}
+
+/* Reduced motion: the same scene, held still. Fillers show as already struck
+   through instead of being crossed out and removed. */
+@media (prefers-reduced-motion: reduce) {
+  .drafting,
+  .drafting-caption [aria-hidden],
+  .drafting-stripe span,
+  .drafting-parts li {
+    animation: none;
+  }
+  .drafting-page .filler {
+    animation: none;
+    background: none;
+    color: var(--muted);
+    text-decoration: line-through;
+    text-decoration-color: var(--record-text);
+    text-decoration-thickness: 2px;
+  }
+}
