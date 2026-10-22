@@ -638,6 +638,40 @@ select {
   font-weight: 800;
 }
 
+.parts-list .part-covers {
+  color: var(--muted);
+  font-family: var(--font-prose);
+}
+
+/* The outline reads as text; this link-styled toggle opens the fields. */
+.link-button {
+  background: none;
+  border: 0;
+  padding: 0.35rem 0;
+  font: inherit;
+  font-weight: 800;
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .link-button:hover {
+    text-decoration-color: var(--record-text);
+  }
+}
+
+.outline-editor {
+  display: grid;
+  gap: 1rem;
+}
+
+.outline-editor[hidden] {
+  display: none;
+}
+
 
 /* Drafting overlay: a full-page scene while Gemma drafts. A four-color stripe
    runs along the top, the transcript sits on a stack of part-colored pages
@@ -964,6 +998,10 @@ body.drafting-open {
   .parts-list .num-block {
     font-size: 1.35rem;
     line-height: 2.25rem;
+  }
+  .link-button {
+    min-height: 2.75rem;
+    font-size: 1.05rem;
   }
   .drafting {
     padding: 2.5rem 1rem;
