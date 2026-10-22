@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { BOOK_PARTS } from "@/lib/chapters";
+import { BOOK_PARTS, DEFAULT_OUTLINE, sanitizeOutline, type BookOutline, type BookPart } from "@/lib/chapters";
 import { VOICE_PRESETS } from "@/lib/voices";
 
 const SAMPLE_DICTATION = `Um, so okay, I remember, I remember the kitchen table, right? Like, I would, I would get up before everybody else, before the house was awake, and I would just, you know, open the laptop and try to figure out one more thing before I had to get ready for work. And it was, it was slow, like, some mornings I literally only understood one little piece, but I wrote it down, I kept a notebook, and, and after a few months of that, I looked back at the notebook and I thought, oh, I actually know some things now. That was the first time I believed I could really do this.`;
@@ -30,9 +30,17 @@ interface Entry {
 }
 
 const ENTRIES_KEY = "ttb-entries";
+const OUTLINE_KEY = "ttb-outline";
 
-function entryPartId(en: Entry): string {
-  return en.partId ?? BOOK_PARTS.find((p) => p.label === en.partLabel)?.id ?? BOOK_PARTS[0].id;
+// File an entry against the outline currently in use, falling back to the
+// default book's parts for entries saved before outlines were editable.
+function entryPartId(en: Entry, parts: BookPart[]): string {
+  return (
+    en.partId ??
+    parts.find((p) => p.label === en.partLabel)?.id ??
+    BOOK_PARTS.find((p) => p.label === en.partLabel)?.id ??
+    parts[0].id
+  );
 }
 
 function formatElapsed(seconds: number): string {
@@ -57,6 +65,7 @@ export default function Home() {
   // Read out by screen readers through the polite live region.
   const [status, setStatus] = useState("");
   const [saved, setSaved] = useState(false);
+  const [outline, setOutline] = useState<BookOutline>(DEFAULT_OUTLINE);
 
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -71,10 +80,44 @@ export default function Home() {
     try {
       const raw = localStorage.getItem(ENTRIES_KEY);
       if (raw) setEntries(JSON.parse(raw));
+      const savedOutline = localStorage.getItem(OUTLINE_KEY);
+      if (savedOutline) setOutline(sanitizeOutline(JSON.parse(savedOutline)));
     } catch {
       /* fresh book */
     }
   }, []);
+
+  function updateOutline(next: BookOutline) {
+    setOutline(next);
+    try {
+      localStorage.setItem(OUTLINE_KEY, JSON.stringify(next));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function updatePart(index: number, patch: Partial<BookPart>) {
+    updateOutline({
+      ...outline,
+      parts: outline.parts.map((p, i) => (i === index ? { ...p, ...patch } : p)),
+    });
+  }
+
+  function addPart() {
+    if (outline.parts.length >= 12) return;
+    updateOutline({
+      ...outline,
+      parts: [
+        ...outline.parts,
+        { id: `part-${Date.now()}`, label: `Part ${outline.parts.length + 1}: `, short: "", covers: "" },
+      ],
+    });
+  }
+
+  function removePart(index: number) {
+    if (outline.parts.length <= 1) return;
+    updateOutline({ ...outline, parts: outline.parts.filter((_, i) => i !== index) });
+  }
 
   useEffect(() => {
     if (!recording) return;
@@ -143,7 +186,7 @@ export default function Home() {
       const res = await fetch("/api/draft", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcript }),
+        body: JSON.stringify({ transcript, outline }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Drafting failed.");
@@ -205,11 +248,14 @@ export default function Home() {
     }
   }
 
-  const countByPart = (id: string) => entries.filter((en) => entryPartId(en) === id).length;
-  const groups = BOOK_PARTS.map((p) => ({
-    part: p,
-    items: entries.filter((en) => entryPartId(en) === p.id),
-  })).filter((g) => g.items.length > 0);
+  const countByPart = (id: string) =>
+    entries.filter((en) => entryPartId(en, outline.parts) === id).length;
+  const groups = outline.parts
+    .map((p) => ({
+      part: p,
+      items: entries.filter((en) => entryPartId(en, outline.parts) === p.id),
+    }))
+    .filter((g) => g.items.length > 0);
 
   return (
     <main className="page">
@@ -220,12 +266,12 @@ export default function Home() {
         </h1>
         <p className="sub">
           Dictate a memory. A local Gemma cleans it into a first draft and files it into the
-          right part of <em>My Story</em>. ElevenLabs reads it back so you can hear it.
+          right part of <em>{outline.title}</em>. ElevenLabs reads it back so you can hear it.
         </p>
       </header>
 
-      <ol className={`strip ${draft ? "has-filing" : ""}`} aria-label="The four parts of My Story">
-        {BOOK_PARTS.map((p, i) => (
+      <ol className={`strip ${draft ? "has-filing" : ""}`} aria-label={`The parts of ${outline.title}`}>
+        {outline.parts.map((p, i) => (
           <li
             key={p.id}
             data-part={p.id}
@@ -418,21 +464,96 @@ export default function Home() {
       )}
 
       <section className="card">
-        <p className="step-label">The book it feeds</p>
-        <h2>My Story, in four parts</h2>
+        <p className="step-label">Your book outline</p>
+        <h2>
+          {outline.title}, in {outline.parts.length} {outline.parts.length === 1 ? "part" : "parts"}
+        </h2>
+        <p className="hint">
+          Built for {DEFAULT_OUTLINE.title}, and that book is the default below. Writing your
+          own? Change the title and the parts, in your words, and Gemma files your dictations
+          against your outline instead. Saved only in this browser.
+        </p>
+        <label className="label" htmlFor="book-title">
+          Book title
+        </label>
+        <input
+          id="book-title"
+          type="text"
+          value={outline.title}
+          onChange={(e) => updateOutline({ ...outline, title: e.target.value })}
+          style={{
+            width: "100%",
+            padding: "0.7rem",
+            fontSize: "1rem",
+            background: "var(--field)",
+            color: "var(--ink)",
+            border: "2px solid var(--field-line)",
+            borderRadius: 0,
+            marginBottom: "1rem",
+          }}
+        />
         <ul className="parts-list">
-          {BOOK_PARTS.map((p, i) => (
+          {outline.parts.map((p, i) => (
             <li key={p.id} data-part={p.id}>
               <span className="num-block" aria-hidden="true">
                 {i + 1}
               </span>
-              <div>
-                <p className="part-name">{p.label}</p>
-                <p className="hint">{p.covers}</p>
+              <div style={{ flex: 1 }}>
+                <label className="label" htmlFor={`part-label-${p.id}`}>
+                  Part name
+                </label>
+                <input
+                  id={`part-label-${p.id}`}
+                  type="text"
+                  value={p.label}
+                  onChange={(e) => updatePart(i, { label: e.target.value })}
+                  style={{
+                    width: "100%",
+                    padding: "0.7rem",
+                    fontSize: "1rem",
+                    background: "var(--field)",
+                    color: "var(--ink)",
+                    border: "2px solid var(--field-line)",
+                    borderRadius: 0,
+                    marginBottom: "0.6rem",
+                  }}
+                />
+                <label className="label" htmlFor={`part-covers-${p.id}`}>
+                  What belongs in this part?
+                </label>
+                <textarea
+                  id={`part-covers-${p.id}`}
+                  rows={2}
+                  value={p.covers}
+                  onChange={(e) => updatePart(i, { covers: e.target.value })}
+                  placeholder="Themes, years, people, places. This is how Gemma decides a memory belongs here."
+                />
+                <div className="row">
+                  <button
+                    onClick={() => removePart(i)}
+                    disabled={outline.parts.length <= 1}
+                    className="cta secondary"
+                  >
+                    Remove this part
+                    <span className="sr-only">: part {i + 1}</span>
+                  </button>
+                </div>
               </div>
             </li>
           ))}
         </ul>
+        <div className="row">
+          <button onClick={addPart} disabled={outline.parts.length >= 12} className="cta secondary">
+            Add a part
+          </button>
+          <button onClick={() => updateOutline(DEFAULT_OUTLINE)} className="cta secondary">
+            Reset to {DEFAULT_OUTLINE.title}
+          </button>
+        </div>
+        <p className="meta">
+          Edits apply to the next dictation you draft. Dictations already saved keep the
+          part they were filed under.
+        </p>
       </section>
     </main>
   );

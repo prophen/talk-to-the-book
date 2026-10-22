@@ -44,3 +44,49 @@ export const BOOK_PARTS: BookPart[] = [
 
 export const partById = (id: string): BookPart =>
   BOOK_PARTS.find((p) => p.id === id) ?? BOOK_PARTS[0];
+
+// A book outline is just data: a title plus its parts. "My Story" ships as
+// the default because this app was built for that book. The outline editor
+// in the UI lets any author swap in their own title and parts, stored in
+// their browser, and the draft route files dictations against whatever
+// outline it is sent.
+
+export interface BookOutline {
+  title: string;
+  parts: BookPart[];
+}
+
+export const DEFAULT_OUTLINE: BookOutline = {
+  title: "My Story",
+  parts: BOOK_PARTS,
+};
+
+const deriveShort = (label: string): string =>
+  label.replace(/^part\s+\d+\s*:\s*/i, "").split(",")[0].trim() || label;
+
+/** Clean up an outline arriving from the client, or fall back to the default. */
+export function sanitizeOutline(input: unknown): BookOutline {
+  if (!input || typeof input !== "object") return DEFAULT_OUTLINE;
+  const raw = input as { title?: unknown; parts?: unknown };
+  const title =
+    typeof raw.title === "string" && raw.title.trim() ? raw.title.trim().slice(0, 120) : DEFAULT_OUTLINE.title;
+  if (!Array.isArray(raw.parts)) return { title, parts: DEFAULT_OUTLINE.parts };
+  const parts: BookPart[] = raw.parts
+    .filter((p): p is Record<string, unknown> => !!p && typeof p === "object")
+    .map((p, i) => {
+      const label =
+        typeof p.label === "string" && p.label.trim() ? p.label.trim().slice(0, 160) : `Part ${i + 1}`;
+      return {
+        id: typeof p.id === "string" && p.id.trim() ? p.id.trim().slice(0, 60) : `part-${i + 1}`,
+        label,
+        short:
+          typeof p.short === "string" && p.short.trim() ? p.short.trim().slice(0, 60) : deriveShort(label),
+        covers: typeof p.covers === "string" ? p.covers.trim().slice(0, 600) : "",
+      };
+    })
+    .slice(0, 12);
+  return { title, parts: parts.length ? parts : DEFAULT_OUTLINE.parts };
+}
+
+export const outlinePartById = (outline: BookOutline, id: string): BookPart =>
+  outline.parts.find((p) => p.id === id) ?? outline.parts[0];
