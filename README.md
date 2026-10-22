@@ -16,7 +16,7 @@ Built for the Hacktoberfest Open-Source AI Challenge, Week 3 (2026): theme "Slow
 4. **Hear it.** Only after she approves the text does ElevenLabs narrate it back, because hearing your own draft read aloud is the fastest edit there is, and because narration credits should never be spent on an unapproved draft.
 5. **Save.** Approved dictations are kept in localStorage on her device, with title, part, and word count.
 
-The four parts of *My Story* live in `lib/chapters.ts`, in one editable file: Breaking into tech; Founder years, betting on myself; PayPal, the win and the loss; The AI pivot, finding my people.
+The four parts of *My Story* live in `lib/chapters.ts` as the default outline. An outline editor in the app lets any author replace the title and parts with their own (stored in their browser, sent with each draft request), so the same flow works for any memoir. Filing decisions always run against the outline the author is actually using.
 
 ## Why open, and why local Gemma
 
