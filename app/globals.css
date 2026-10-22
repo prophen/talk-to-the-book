@@ -832,6 +832,12 @@ body.drafting-open {
   .error {
     font-size: 1rem;
   }
+  /* The native player is thin on phones; a taller box gives play and the
+     scrubber bigger targets where the browser lets the controls scale. */
+  audio {
+    display: block;
+    height: 3.5rem;
+  }
   .draft-title {
     font-size: 1.5rem;
   }
