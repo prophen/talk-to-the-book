@@ -19,13 +19,9 @@ const sourceSerif = Source_Serif_4({
   display: "swap",
 });
 
-// Share links need absolute image URLs. Set NEXT_PUBLIC_SITE_URL to the public
-// address; on Vercel the production domain is picked up without it.
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL ??
-  (process.env.VERCEL_PROJECT_PRODUCTION_URL
-    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-    : "http://localhost:3000");
+// Share links and the canonical URL need an absolute address. The site lives
+// at talktothebook.tech; set NEXT_PUBLIC_SITE_URL to point somewhere else.
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://talktothebook.tech";
 
 // The favicon, Apple icon and share images come from the icon, apple-icon,
 // opengraph-image and twitter-image files in this folder.
@@ -34,6 +30,7 @@ export const metadata: Metadata = {
   title: SITE_NAME,
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
+  alternates: { canonical: "/" },
   openGraph: {
     type: "website",
     siteName: SITE_NAME,
