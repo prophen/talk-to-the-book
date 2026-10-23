@@ -672,6 +672,15 @@ select {
   display: none;
 }
 
+/* Outline descriptions are short notes, not manuscript prose, so they match
+   the title and part-name fields instead of the serif writing areas. */
+.outline-editor textarea {
+  font-family: var(--font-ui);
+  font-size: 1rem;
+  line-height: 1.5;
+  padding: 0.7rem;
+}
+
 
 /* Drafting overlay: a full-page scene while Gemma drafts. A four-color stripe
    runs along the top, the transcript sits on a stack of part-colored pages
@@ -998,6 +1007,9 @@ body.drafting-open {
   .parts-list .num-block {
     font-size: 1.35rem;
     line-height: 2.25rem;
+  }
+  .outline-editor textarea {
+    font-size: 1.05rem;
   }
   .link-button {
     min-height: 2.75rem;
