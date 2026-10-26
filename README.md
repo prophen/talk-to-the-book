@@ -1,6 +1,6 @@
 # Talk to the Book
 
-**Live demo: [talk-to-the-book.nikema.dev](https://talk-to-the-book.nikema.dev)**
+**Live demo: [talktothebook.tech](https://talktothebook.tech)**
 
 The hosted demo drafts with the cloud Gemma fallback, because a server has no local model. The real workflow is local-first: run it on your own machine (setup below) and your dictation never leaves it for the drafting step. Transcription and read-back use ElevenLabs either way.
 
@@ -62,10 +62,3 @@ Open http://localhost:3000. No ElevenLabs key? Use "Load sample dictation", then
 - Overall, Hacktoberfest Week 3: Slow and Steady
 - Best Use of Gemma ($200 featured): Gemma is the drafting and filing brain, local first
 - Best Use of ElevenLabs ($100 partner): Scribe gives the book ears, text-to-speech gives it a voice
-
-## Write-up angles (for the DEV post)
-
-- Laziness as an accessibility feature: dictation removes the blank page, not just keystrokes.
-- Privacy as the open-model argument: an unpublished memoir is exactly the text you want processed on your own machine.
-- The approval gate as a cost feature: narration credits are only spent after a human approves the text.
-- Honest limits: local Gemma cleans and files well; it should never be trusted to remember what you said, which is why the prompt forbids inventing and the UI shows the raw transcript next to the draft.
