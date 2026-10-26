@@ -1,0 +1,124 @@
+1
+00:00:00,600 --> 00:00:04,590
+Talk to the Book turns a spoken memory
+into a first draft of your memoir.
+
+2
+00:00:04,900 --> 00:00:07,100
+Here's the whole loop, start to finish.
+
+3
+00:00:11,000 --> 00:00:15,064
+I upload a voice memo, rambling, false
+starts and all.
+
+4
+00:00:15,064 --> 00:00:18,450
+ElevenLabs Scribe turns it into a
+transcript.
+
+5
+00:00:21,600 --> 00:00:24,790
+Then Gemma, an open model, cleans it up
+and files it.
+
+6
+00:00:28,670 --> 00:00:33,117
+Gemma strips the filler, keeps every
+detail, and invents nothing.
+
+7
+00:00:33,117 --> 00:00:36,606
+It files the memory into the right part of
+my book,
+
+8
+00:00:36,606 --> 00:00:38,590
+Part One, Breaking into Tech,
+
+9
+00:00:38,870 --> 00:00:41,220
+with a suggested section and a reason.
+
+10
+00:00:41,570 --> 00:00:44,670
+The draft is editable before anything else
+happens.
+
+11
+00:00:46,600 --> 00:00:52,250
+Once I approve it, I pick a voice, and
+ElevenLabs reads my draft back to me.
+
+12
+00:00:54,110 --> 00:00:56,300
+I found a lot of opportunities through
+Twitter.
+
+13
+00:00:56,670 --> 00:00:58,202
+I had built a community there,
+
+14
+00:00:58,202 --> 00:01:01,010
+and I was tuned in to the tech
+conversations happening.
+
+15
+00:01:01,650 --> 00:01:05,920
+One opportunity that really caught my eye
+was a post by Jessica Livingston.
+
+16
+00:01:06,490 --> 00:01:08,775
+She was the co-founder of Y Combinator,
+
+17
+00:01:08,775 --> 00:01:12,700
+and she wrote a blog post about wanting to
+see more women founders.
+
+18
+00:01:13,280 --> 00:01:17,170
+She was going to sponsor a program that
+taught women how to code over the summer
+
+19
+00:01:17,550 --> 00:01:20,600
+in partnership with Lambda School, which
+was…
+
+20
+00:01:23,000 --> 00:01:26,830
+Hearing your own words read aloud is the
+fastest edit there is.
+
+21
+00:01:27,180 --> 00:01:30,199
+And because narration only happens after
+approval,
+
+22
+00:01:30,199 --> 00:01:33,700
+no credits are spent on a draft you
+haven't signed off on.
+
+23
+00:01:36,000 --> 00:01:40,260
+Saved drafts stay on my device, filed
+under the book's four-part outline.
+
+24
+00:01:40,890 --> 00:01:43,764
+Run it locally, and Gemma drafts on your
+own machine,
+
+25
+00:01:43,764 --> 00:01:46,800
+so an unpublished memoir never has to
+leave your laptop.
+
+26
+00:01:49,000 --> 00:01:54,100
+Talk to the Book. Because talking is
+lazier than typing.

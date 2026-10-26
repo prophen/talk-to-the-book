@@ -7,6 +7,7 @@ A narrated ~2 minute demo of Talk to the Book, built with [HyperFrames](https://
 - `index.html`: the edit. It cuts Nikema's screen recording into segments (waits sped up 2x and 4x), pushes in on the app column so its text reads at 1080p, lets about 28 seconds of the real ElevenLabs read-back play, and lays the narration over the rest.
 - `compositions/`: the title card, the Talk / Draft / Hear / Save step rail, and the outro card.
 - `script/n1.txt` to `n8.txt`: the narration, one file per beat. `assets/voice/n*.wav` are Nikema's own read of those lines, cut from one take (second takes kept where a line was redone) and normalized to -18 LUFS.
+- `talk-to-the-book-demo.srt`: captions for the rendered MP4 (narration and the read-back), timed to the cut. Retime it if the edit changes.
 - `vendor/gsap.min.js`: GSAP 3.14.2, vendored so renders never need a CDN.
 
 ## Render it
