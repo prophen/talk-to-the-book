@@ -600,7 +600,7 @@ export default function Home() {
                     </label>
                     <textarea
                       id={`part-covers-${p.id}`}
-                      rows={2}
+                      rows={3}
                       value={p.covers}
                       onChange={(e) => updatePart(i, { covers: e.target.value })}
                       placeholder="Themes, years, people, places. This is how Gemma decides a memory belongs here."
