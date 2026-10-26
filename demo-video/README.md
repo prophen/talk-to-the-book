@@ -6,7 +6,7 @@ A narrated ~2 minute demo of Talk to the Book, built with [HyperFrames](https://
 
 - `index.html`: the edit. It cuts Nikema's screen recording into segments (waits sped up 2x and 4x), pushes in on the app column so its text reads at 1080p, lets about 28 seconds of the real ElevenLabs read-back play, and lays the narration over the rest.
 - `compositions/`: the title card, the Talk / Draft / Hear / Save step rail, and the outro card.
-- `script/n1.txt` to `n8.txt`: the narration, one file per beat. `assets/voice/n*.wav` are those lines spoken by the local Kokoro voice `af_heart`.
+- `script/n1.txt` to `n8.txt`: the narration, one file per beat. `assets/voice/n*.wav` are Nikema's own read of those lines, cut from one take (second takes kept where a line was redone) and normalized to -18 LUFS.
 - `vendor/gsap.min.js`: GSAP 3.14.2, vendored so renders never need a CDN.
 
 ## Render it
@@ -24,14 +24,12 @@ npm run render    # writes an MP4 under renders/
 
 ## Change the narration
 
-Edit a line in `script/`, regenerate its audio, then update that clip's `data-duration` in `index.html` if the length changed:
+Re-record a line as `assets/voice/nN.wav`, then update that clip's `data-duration` in `index.html` if the length changed. For a quick placeholder voice, HyperFrames has local TTS:
 
 ```bash
 pip install kokoro-onnx soundfile   # once
 npx hyperframes tts script/n4.txt -v af_heart -o assets/voice/n4.wav
 ```
-
-To use your own voice instead, record each line as `assets/voice/nN.wav` (or point the `<audio>` tags at new files) and adjust the timings.
 
 ## Agent skills
 
