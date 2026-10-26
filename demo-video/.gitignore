@@ -1,0 +1,6 @@
+# The 2:47 screen recording is ~60 MB; keep it out of git (see README).
+assets/recording.mp4
+# HyperFrames working state, snapshots and renders
+.hyperframes/
+renders/
+*.mp4

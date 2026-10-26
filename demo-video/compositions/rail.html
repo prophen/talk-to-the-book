@@ -1,0 +1,63 @@
+<template>
+  <style>
+    /* The step rail sits in the left pillarbox (the recording is 1512 wide, centred). */
+    #root {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    #rail-list {
+      position: absolute;
+      left: 40px;
+      top: 300px;
+      width: 150px;
+      display: flex;
+      flex-direction: column;
+      gap: 34px;
+      font-family: "Archivo Black", sans-serif;
+      color: #f6ece1;
+    }
+    .rail-step {
+      opacity: 0.35;
+      border-left: 8px solid var(--c);
+      padding-left: 16px;
+    }
+    .rail-step b {
+      display: block;
+      font-size: 28px;
+      color: var(--c);
+      line-height: 1.1;
+    }
+    .rail-step span {
+      display: block;
+      font-size: 30px;
+      text-transform: uppercase;
+      line-height: 1.15;
+    }
+  </style>
+  <div id="root" data-composition-id="rail" data-width="1920" data-height="1080" data-layout-allow-overflow>
+    <div id="rail-list">
+      <div id="rail-talk" class="rail-step" style="--c: #13808b"><b>1</b><span>Talk</span></div>
+      <div id="rail-draft" class="rail-step" style="--c: #f2a93b"><b>2</b><span>Draft</span></div>
+      <div id="rail-hear" class="rail-step" style="--c: #c46aa8"><b>3</b><span>Hear</span></div>
+      <div id="rail-save" class="rail-step" style="--c: #ff7a45"><b>4</b><span>Save</span></div>
+    </div>
+  </div>
+  <script>
+    // Times are local to the rail (it starts at 4s on the main timeline).
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#rail-list", { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.5, ease: "power3.out" }, 0);
+    const steps = [
+      ["#rail-talk", 0],
+      ["#rail-draft", 17],
+      ["#rail-hear", 42],
+      ["#rail-save", 91.5],
+    ];
+    steps.forEach(([id, at], i) => {
+      tl.fromTo(id, { opacity: 0.35 }, { opacity: 1, duration: 0.3 }, at);
+      if (steps[i + 1]) tl.to(id, { opacity: 0.35, duration: 0.3 }, steps[i + 1][1]);
+    });
+    tl.to("#rail-list", { opacity: 0, duration: 0.4 }, 103);
+    window.__timelines["rail"] = tl;
+  </script>
+</template>
